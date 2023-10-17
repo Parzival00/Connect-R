@@ -28,6 +28,16 @@ public class Tile : MonoBehaviour
 
     private void Update()
     {
+        width = (int)gameObject.transform.position.x;
+        height = (int)gameObject.transform.position.y;
+        if(currentState != states.none)
+        {
+            occupied = true;
+        }
+        else
+        {
+            occupied = false;
+        }
         //switch (currentState)
         //{
         //    case states.none:
