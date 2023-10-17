@@ -15,7 +15,10 @@ public class GridManager : MonoBehaviour
     [SerializeField] InputField widthInput;
     [SerializeField] InputField heightInput;
     [SerializeField] InputField connectInput;
+    [SerializeField] Toggle player1AI;
+    [SerializeField] Toggle player2AI;
     bool player1Turn;
+    bool gameStarted = false;
 
     public void StartGame()
     {
@@ -29,6 +32,36 @@ public class GridManager : MonoBehaviour
         generateGrid();
         player1Turn = true;
         winText.gameObject.SetActive(false);
+
+        gameStarted = true;
+    }
+
+    private void Update()
+    {
+        if (gameStarted)
+        {
+            Tile[] board = FindObjectsOfType<Tile>();
+            List<Tile> currentBoard = new List<Tile>();
+
+            foreach (Tile t in board)
+            {
+                currentBoard.Add(t);
+            }
+
+
+            if (player1Turn && player1AI.isOn)
+            {
+                print("a");
+                int useless = miniMax(currentBoard, 0, true);
+                player1Turn = false;
+            }
+            else if (!player1Turn && player2AI.isOn)
+            {
+                print("b");
+                int useless = miniMax(currentBoard, 0, false);
+                player1Turn = true;
+            }
+        }
     }
 
     void generateGrid()
@@ -50,9 +83,8 @@ public class GridManager : MonoBehaviour
 
     public void placeToken()
     {
-        print(getTileAtPosition(int.Parse(input.text), height - 1).name);
-
-        Tile t = new Tile();
+        
+        Tile t = getTileAtPosition(int.Parse(input.text), height - 1);
 
         if (int.Parse(input.text) < height)
         {
@@ -63,7 +95,56 @@ public class GridManager : MonoBehaviour
         {
             if (player1Turn)
             {
-                print("this one");
+                t.currentState = Tile.states.player1;
+                t.GetComponent<SpriteRenderer>().color = Color.red;
+            }
+            else
+            {
+                t.currentState = Tile.states.player2;
+                t.GetComponent<SpriteRenderer>().color = Color.yellow;
+            }
+
+            int highest = getHighestMatch(t);
+
+
+            if (highest >= amountToConnect)
+            {
+                if (player1Turn)
+                {
+                    //player 1 wins
+                    winText.text = "PLAYER 1 WINS!";
+                    winText.gameObject.SetActive(true);
+                }
+                else
+                {
+                    //player 2 wins
+                    winText.text = "PLAYER 2 WINS!";
+                    winText.gameObject.SetActive(true);
+                }
+            }
+
+            player1Turn = !player1Turn;
+        }
+
+    }
+
+    public void placeToken(int position)
+    {
+
+        Tile t = getTileAtPosition(position, height - 1);
+
+       
+
+        if (position < height)
+        {
+            t = getLowest(position, height);
+        }
+
+
+        if (t != null)
+        {
+            if (player1Turn)
+            {
                 t.currentState = Tile.states.player1;
                 t.GetComponent<SpriteRenderer>().color = Color.red;
             }
@@ -99,8 +180,31 @@ public class GridManager : MonoBehaviour
 
     private int miniMax(List<Tile> board, int depth, bool isMaximizing)
     {
+        
         int score = 0;
         int bestScore = 0;
+        int bestMove = -1;
+
+        List<Tile> unoccupiedTiles = new List<Tile>();
+        List<Tile> player1Tiles = new List<Tile>();
+        List<Tile> player2Tiles = new List<Tile>();
+
+        foreach(Tile t in board)
+        {
+            switch (t.currentState)
+            {
+                case Tile.states.none:
+                    unoccupiedTiles.Add(t);
+                    break;
+                case Tile.states.player1:
+                    player1Tiles.Add(t);
+                    break;
+                case Tile.states.player2:
+                    player2Tiles.Add(t);
+                    break;
+            }
+        }
+
 
         //if the game is over then do not do the rest of the algorithm
         if (winText.gameObject.activeSelf == true)
@@ -114,54 +218,96 @@ public class GridManager : MonoBehaviour
         }
 
         //if next move is a terminal state, return it
-        foreach(Tile t in board)
-        {
-            if(getHighestMatch(t) >= amountToConnect)
-            {
-                return score;
-            }
-        }
+        //foreach (Tile t in board)
+        //{
+        //    if(getHighestMatch(t) >= amountToConnect)
+        //    {
+        //        print("hi");
+        //        print(getHighestMatch(t));
+        //        placeToken((int)t.transform.position.x);
+        //        return score;
+        //    }
+        //}
 
-        
         if (isMaximizing)
         {
             bestScore = int.MinValue;
 
             for(int i = 0; i < width; i++)
             {
-                Tile toPlace = getLowest(i, height-1);
-                toPlace.currentState = Tile.states.player1;
-                //put it all into a new list
-                List<Tile> newBoard = new List<Tile>();
+                Tile toPlace = getLowest(i, height);
+                getTileAtPosition((int)toPlace.gameObject.transform.position.x, (int)toPlace.gameObject.transform.position.y).currentState = Tile.states.player1;
 
+                score = miniMax(board, depth + 1, false);
+                getTileAtPosition((int)toPlace.gameObject.transform.position.x, (int)toPlace.gameObject.transform.position.y).currentState = Tile.states.none;
 
-                score = miniMax(newBoard, depth + 1, false);
-                toPlace.currentState = Tile.states.none;
-                bestScore = Mathf.Max(bestScore, score);
+                //bestScore = Mathf.Max(bestScore, score);
+                if(score > bestScore)
+                {
+                    bestScore = score;
+                    bestMove = i;
+                }
             }
+
+            foreach(Tile t in unoccupiedTiles)
+            {
+                t.currentState = Tile.states.none;
+            }
+            foreach (Tile t in player1Tiles)
+            {
+                t.currentState = Tile.states.player1;
+            }
+            foreach (Tile t in player2Tiles)
+            {
+                t.currentState = Tile.states.player2;
+            }
+            placeToken(bestMove);
             return bestScore;
         }
         else
         {
+            
             bestScore = int.MaxValue;
 
             for (int i = 0; i < width; i++)
             {
-                Tile toPlace = getLowest(i, height - 1);
+                Tile toPlace = getLowest(i, height);
+                //getTileAtPosition((int)toPlace.gameObject.transform.position.x, (int)toPlace.gameObject.transform.position.y).currentState = Tile.states.player2;
                 toPlace.currentState = Tile.states.player2;
-                //put it all into a new list
-                List<Tile> newBoard = new List<Tile>();
-
-
-                score = miniMax(newBoard, depth + 1, true);
+                score = miniMax(board, depth + 1, true);
                 toPlace.currentState = Tile.states.none;
-                bestScore = Mathf.Min(bestScore, score);
+                //getTileAtPosition((int)toPlace.gameObject.transform.position.x, (int)toPlace.gameObject.transform.position.y).currentState = Tile.states.none;
+
+                //bestScore = Mathf.Min(bestScore, score);
+                if (score < bestScore)
+                {
+                    bestScore = score;
+                    bestMove = i;
+                }
             }
+
+            foreach (Tile t in unoccupiedTiles)
+            {
+                t.currentState = Tile.states.none;
+            }
+            foreach (Tile t in player1Tiles)
+            {
+                t.currentState = Tile.states.player1;
+            }
+            foreach (Tile t in player2Tiles)
+            {
+                t.currentState = Tile.states.player2;
+            }
+            placeToken(bestMove);
+
+            Tile bestTile = getLowest(bestScore, height - 1);
+            print(bestTile.transform.position.y);
+
             return bestScore;
         }
 
 
-        return -1;
+        
     }
 
     public Tile getTileAtPosition(int x, int y)
@@ -183,7 +329,9 @@ public class GridManager : MonoBehaviour
     /// </summary>
     public Tile getLowest(int x, int y)
     {
-        if (getTileAtPosition(x, y).currentState != Tile.states.none)
+        
+
+        if (getTileAtPosition(x, y) != null && getTileAtPosition(x, y).currentState != Tile.states.none)
         {
             return getTileAtPosition(x, y + 1);
         }
@@ -200,17 +348,20 @@ public class GridManager : MonoBehaviour
 
     int getHighestMatch(Tile t)
     {
+        //print(t.name);
         int currentMax = 0;
 
         //check up and down
-        while (getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1) != null && getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y-1).currentState == t.currentState)
+        while (getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1) != null && getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y-1).currentState == t.currentState && getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1).currentState != Tile.states.none)
         {
             t = getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1);
         }
 
         int numInRow = 1;
-        while (getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y + 1).currentState == t.currentState)
+        while (getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y + 1) != null && getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y + 1).currentState == t.currentState)
         {
+            if (t.transform.position.x >= width - 1 || t.transform.position.y >= height - 1 || t.transform.position.x <= 0 || t.transform.position.y <= 0)
+                break;
             t = getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y + 1);
             numInRow++;
         }
@@ -330,7 +481,7 @@ public class GridManager : MonoBehaviour
         }
 
         int numInRow = 1;
-        while (getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y + 1).currentState == t.currentState)
+        while (getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y + 1) != null && getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y + 1).currentState == t.currentState)
         {
             t = getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y + 1);
             numInRow++;
@@ -391,25 +542,16 @@ public class GridManager : MonoBehaviour
 
     int getHighestWithBlanks(Tile t)
     {
+        if(t.currentState == Tile.states.none)
+        {
+            return 0;
+        }
          int currentMax = 0;
 
-        //check up and down
-        while (getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1) != null && getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y-1).currentState == t.currentState)
-        {
-            t = getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1);
-        }
-
+       
         int numInRow = 1;
         int numNull = 0;
-        while (getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y + 1).currentState == t.currentState || getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1).currentState == Tile.states.none)
-        {
-            if(t.currentState == Tile.states.none)
-            {
-                numNull++;
-            }
-            t = getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y + 1);
-            numInRow++;
-        }
+
 
         currentMax = Mathf.Max(numInRow, currentMax);
         if(currentMax ==amountToConnect && numNull == 1)
@@ -425,7 +567,7 @@ public class GridManager : MonoBehaviour
 
         numInRow = 1;
         numNull = 0;
-        while (getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y) != null && (getTileAtPosition((int)t.transform.position.x+1, (int)t.transform.position.y).currentState == t.currentState || getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1).currentState == Tile.states.none))
+        while (getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y) != null && (getTileAtPosition((int)t.transform.position.x+1, (int)t.transform.position.y).currentState == t.currentState || getTileAtPosition((int)t.transform.position.x+1, (int)t.transform.position.y).currentState == Tile.states.none))
         {
             if (t.currentState == Tile.states.none)
             {
@@ -449,7 +591,7 @@ public class GridManager : MonoBehaviour
 
         numInRow = 1;
         numNull = 0;
-        while (getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y + 1) != null && (getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y).currentState == t.currentState || getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1).currentState == Tile.states.none))
+        while (getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y + 1) != null && (getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y+1).currentState == t.currentState || getTileAtPosition((int)t.transform.position.x+1, (int)t.transform.position.y +1).currentState == Tile.states.none))
         {
             if (t.currentState == Tile.states.none)
             {
@@ -473,7 +615,7 @@ public class GridManager : MonoBehaviour
 
         numInRow = 1;
         numNull = 0;
-        while (getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y + 1) != null && (getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y).currentState == t.currentState || getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1).currentState == Tile.states.none))
+        while (getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y + 1) != null && (getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y+1).currentState == t.currentState || getTileAtPosition((int)t.transform.position.x-1, (int)t.transform.position.y +1).currentState == Tile.states.none))
         {
             if (t.currentState == Tile.states.none)
             {
