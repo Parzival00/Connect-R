@@ -5,10 +5,24 @@ using UnityEngine.UI;
 
 public class GridManager : MonoBehaviour
 {
-    [SerializeField] int width, height, amountToConnect;
+    [Header("Debug Parameters")]
+    [SerializeField] int width;
+    [SerializeField] int height;
+    [SerializeField] int amountToConnect;
     [SerializeField] Tile tile;
+    [SerializeField] bool useDebugSettings;
+
+    [Header("Object References")]
     [SerializeField] InputField input;
     [SerializeField] Text winText;
+    [SerializeField] InputField widthInput;
+    [SerializeField] InputField heightInput;
+    [SerializeField] InputField RInput;
+    [SerializeField] Toggle player1AI;
+    [SerializeField] Toggle player2AI;
+    [SerializeField] GameObject MainMenu;
+    [SerializeField] GameObject GameMenu;
+
     bool player1Turn;
 
     Tile[] tileObjects;
@@ -16,14 +30,25 @@ public class GridManager : MonoBehaviour
 
     private void Start()
     {
-        generateGrid();
+        //generateGrid();
         player1Turn = true;
         winText.gameObject.SetActive(false);
         tileObjects = FindObjectsOfType<Tile>();
     }
 
-    void generateGrid()
+    public void generateGrid()
     {
+        MainMenu.SetActive(false);
+        GameMenu.SetActive(true);
+
+        if (!useDebugSettings)
+        {
+            width = int.Parse(widthInput.text);
+            height = int.Parse(heightInput.text);
+            amountToConnect = int.Parse(RInput.text);
+        }
+
+
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
