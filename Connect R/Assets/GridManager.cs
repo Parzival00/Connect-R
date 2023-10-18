@@ -87,19 +87,23 @@ public class GridManager : MonoBehaviour
 
         buildTree(true);
 
-        foreach(TileClass t in moveTree.Children[0].Children[0].Children[0].Children[0].Value)
-        {
-            if (t.currentState == TileClass.states.player1)
-            {
-                getTileObject(t).GetComponent<SpriteRenderer>().color = Color.red;
-            }
-            else if (t.currentState == TileClass.states.player2)
-            {
-                getTileObject(t).GetComponent<SpriteRenderer>().color = Color.yellow;
-            }
-        }
+        //foreach(TileClass t in moveTree.Children[0].Children[0].Children[0].Children[0].Value)
+        //{
+        //    if (t.currentState == TileClass.states.player1)
+        //    {
+        //        getTileObject(t).GetComponent<SpriteRenderer>().color = Color.red;
+        //    }
+        //    else if (t.currentState == TileClass.states.player2)
+        //    {
+        //        getTileObject(t).GetComponent<SpriteRenderer>().color = Color.yellow;
+        //    }
+        //}
 
-        miniMax(4, true);
+        TreeNode<List<TileClass>> node = moveTree;
+
+        doAIMove(true);
+
+        //print(miniMax(node, 0, true));
 
     }
 
@@ -248,8 +252,40 @@ public class GridManager : MonoBehaviour
 
         }
 
+    }
 
+    void placeTokenOnTurnColor(int pos, bool isPlayer1)
+    {
+        TileClass t = getLowest(pos, height - 1);
 
+        if (pos < height)
+        {
+            t = getLowest(pos, height - 1);
+        }
+
+        if (t != null)
+        {
+            if (player1Turn)
+            {
+                t.currentState = TileClass.states.player1;
+            }
+            else
+            {
+                t.currentState = TileClass.states.player2;
+            }
+
+        }
+
+        if (player1Turn)
+        {
+            getTileObject(t).GetComponent<SpriteRenderer>().color = Color.red;
+        }
+        else
+        {
+            getTileObject(t).GetComponent<SpriteRenderer>().color = Color.yellow;
+        }
+
+        player1Turn = !player1Turn;
     }
 
     int getHighestMatch(TileClass t)
@@ -263,7 +299,7 @@ public class GridManager : MonoBehaviour
         }
 
         int numInRow = 1;
-        while (getTileAtPosition((int)t.x, (int)t.y + 1).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x, (int)t.y + 1) != null && getTileAtPosition((int)t.x, (int)t.y + 1).currentState == t.currentState)
         {
             t = getTileAtPosition((int)t.x, (int)t.y + 1);
             numInRow++;
@@ -330,7 +366,7 @@ public class GridManager : MonoBehaviour
                 if (t.currentState == TileClass.states.player1)
                 {
                     //how close to the center is it
-                    score -= (int)Mathf.Abs(t.x - (float)width) * 30;
+                    score -= (int)Mathf.Abs(t.x+1 - (float)width) * 30;
 
                     //how many total are in a row for each direction with better score for the higher the amount in a row is 
                     score += getAmountInEachDirection(t) * 2;
@@ -703,39 +739,108 @@ public class GridManager : MonoBehaviour
     }
 
 
-    int miniMax(int depth, bool maxingPlayer)
+    int miniMax(TreeNode<List<TileClass>> node, int depth, bool maxingPlayer)
     {
         print("Hi from minimax");
-        int score = 0;
+        int score = heuristic(node.Value, maxingPlayer);
         int bestScore = 0;
-        int bestMove = -1;
+
+        //check terminal
+        if(node.Children.Count == 0 || depth >= maximumDepth)
+        {
+            return score;
+        }
 
        
 
-        //check if terminal and return heuristic value
+  
+        //check if that move is better than any of the other moves and overwrite it
+        if (maxingPlayer)
+        {
+            bestScore = int.MinValue;
+            //evaluate all possible moves at this depth
+            foreach (TreeNode<List<TileClass>> board in node.Children)
+            {
+                //call minimaax on that new board
+                score = miniMax(board, depth + 1, !maxingPlayer);
+
+                bestScore = Mathf.Max(score, bestScore);
+
+            }
+            
+        }
+        else
+        {
+            bestScore = int.MaxValue;
+            //evaluate all possible moves at this depth
+            foreach (TreeNode<List<TileClass>> board in node.Children)
+            {
+                //call minimaax on that new board
+                score = miniMax(board, depth + 1, !maxingPlayer);
+
+                bestScore = Mathf.Min(score, bestScore);
+
+            }
+            
+
+        }
 
 
 
-        //evaluate all possible moves at this depth
-        //foreach (TreeNode<List<TileClass>> board in moveTree[depth].Children)
-        //{
-        //    //call minimaax on that new board
 
-        //    //check if that move is better than any of the other moves and overwrite it
-        //    if (maxingPlayer)
-        //    {
+        //print("current best: " + bestScore);
 
-        //    }
-        //    else
-        //    {
+        //return the best score
+        return bestScore;
+    }
 
-        //    }
-        //}
+    void doAIMove(bool maximizing) 
+    {
+        buildTree(maximizing);
 
+        List <TileClass> bestBoard = new List<TileClass>();
 
+        if (maximizing)
+        {
+            int bestScore = int.MinValue;
 
-        //do and return the best move
+            foreach (TreeNode<List<TileClass>> node in moveTree.Children)
+            {
+                int score = miniMax(node, 0, maximizing);
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestBoard = node.Value;
+                    print("Best is " + bestScore);
+                }
+            }
+        }
+        else
+        {
+            int bestScore = int.MaxValue;
 
-        return score;
+            foreach (TreeNode<List<TileClass>> node in moveTree.Children)
+            {
+                int score = miniMax(node, 0, maximizing);
+                if (score < bestScore)
+                {
+                    bestScore = score;
+                    bestBoard = node.Value;
+                    print("Best is " + bestScore);
+                }
+            }
+        }
+
+        int bestmove = -1;
+        for(int i = 0; i < allTiles.Count; i ++)
+        {
+            if (bestBoard[i].currentState != allTiles[i].currentState)
+            {
+                bestmove = bestBoard[i].x;
+                
+            }
+        }
+        placeTokenOnTurnColor(bestmove, maximizing);
+        
     }
 }
