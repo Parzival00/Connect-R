@@ -11,7 +11,7 @@ public class GridManager : MonoBehaviour
     [SerializeField] int amountToConnect;
     [SerializeField] Tile tile;
     [SerializeField] bool useDebugSettings;
-    int maximumDepth = 5;
+    int maximumDepth = 2;
 
     [Header("Object References")]
     [SerializeField] InputField input;
@@ -31,19 +31,25 @@ public class GridManager : MonoBehaviour
 
     TreeNode<List<TileClass>> moveTree;
 
+    int childrenCount = 0;
+
+    int minIndex, maxIndex;
+
     private void Start()
     {
         //generateGrid();
         player1Turn = true;
         winText.gameObject.SetActive(false);
-        tileObjects = FindObjectsOfType<Tile>();
-        moveTree = new TreeNode<List<TileClass>>(allTiles);
+        
+        
     }
 
     public void generateGrid()
     {
         MainMenu.SetActive(false);
         GameMenu.SetActive(true);
+
+        
 
         if (!useDebugSettings)
         {
@@ -72,6 +78,29 @@ public class GridManager : MonoBehaviour
         }
         float avg = (width + height) / 1.5f;
         GameObject.FindGameObjectWithTag("MainCamera").transform.position = new Vector3(width/2f - .5f, height/2f -.5f, - avg);
+
+        tileObjects = FindObjectsOfType<Tile>();
+
+
+        List<TileClass> tempTiles = new List<TileClass>();
+
+
+        buildTree(true);
+
+        foreach(TileClass t in moveTree.Children[0].Children[0].Children[0].Children[0].Value)
+        {
+            if (t.currentState == TileClass.states.player1)
+            {
+                getTileObject(t).GetComponent<SpriteRenderer>().color = Color.red;
+            }
+            else if (t.currentState == TileClass.states.player2)
+            {
+                getTileObject(t).GetComponent<SpriteRenderer>().color = Color.yellow;
+            }
+        }
+
+        miniMax(4, true);
+
     }
 
     Tile getTileObject(TileClass t)
@@ -98,6 +127,31 @@ public class GridManager : MonoBehaviour
             }
         }
         return null;
+    }
+
+    /// <summary>
+    /// returns a TileClass that is a copy of the input, but not a reference
+    /// </summary>
+    TileClass duplicateTile(TileClass tileIn)
+    {
+        TileClass newTile = new TileClass();
+        newTile.x = tileIn.x;
+        newTile.y = tileIn.y;
+        newTile.currentState = tileIn.currentState;
+
+        return newTile;
+    }
+
+    List<TileClass> duplicateBoard(List<TileClass> inputBoard)
+    {
+        List<TileClass> newList = new List<TileClass>();
+
+        foreach (TileClass t in inputBoard)
+        {
+            newList.Add(duplicateTile(t));
+        }
+
+        return newList;
     }
 
     /// <summary>
@@ -158,9 +212,6 @@ public class GridManager : MonoBehaviour
                 }
             }
 
-
-            print(heuristic(allTiles, player1Turn));
-
             if (player1Turn)
             {
                 getTileObject(t).GetComponent<SpriteRenderer>().color = Color.red;
@@ -172,6 +223,32 @@ public class GridManager : MonoBehaviour
 
             player1Turn = !player1Turn;
         }
+
+    }
+
+    public void placeTokenOnTurn(int pos, bool isPlayer1)
+    {
+        TileClass t = getLowest(pos, height - 1);
+
+        if (pos < height)
+        {
+            t = getLowest(pos, height - 1);
+        }
+
+        if (t != null)
+        {
+            if (player1Turn)
+            {
+                t.currentState = TileClass.states.player1;
+            }
+            else
+            {
+                t.currentState = TileClass.states.player2;
+            }
+
+        }
+
+
 
     }
 
@@ -461,49 +538,199 @@ public class GridManager : MonoBehaviour
         return currentMax * 10;
     }
 
-    void makeTree()
+    /// <summary>
+    /// populates the tree up to 5 deep
+    /// </summary>
+    void populateChildren(int currentDepth, bool maxingPlayer)
     {
-        //try all of the possible moves that can be made
-        //the number of potential moves a player can do is equal to the width of the board
-        for (int i = 0; i < width; i++)
+        //I truly am sorry for the way I ended up doing this, but I worked for well over 5 hours just on this iteration of the tree. I already had restarted before this
+        print("in depth " + currentDepth);
+        switch (currentDepth)
         {
-            for (int j = 0; j < maximumDepth; j++)
-            {
-                //add the tile to the a new identical board at position i
-                List<TileClass> newBoard = new List<TileClass>();
+            case 0:
+                childrenCount++;
+                for (int i = 0; i < width; i++)
+                {
+                    List<TileClass> originalBoard = duplicateBoard(allTiles);
+
+                    allTiles = duplicateBoard(moveTree.Value);
+
+                    placeTokenOnTurn(i, maxingPlayer);
+                    moveTree.AddChild(duplicateBoard(allTiles));
 
 
-                moveTree[j].AddChild(newBoard);
-            }
+                    allTiles = duplicateBoard(originalBoard);
+
+                }
+                break;
+            case 1:
+                foreach(TreeNode<List<TileClass>> node in moveTree.Children)
+                {
+                    childrenCount++;
+                    for (int i = 0; i < width; i++)
+                    {
+                        List<TileClass> originalBoard = duplicateBoard(allTiles);
+
+                        allTiles = duplicateBoard(node.Value);
+
+                        placeTokenOnTurn(i, maxingPlayer);
+                        node.AddChild(duplicateBoard(allTiles));
+
+                        allTiles = duplicateBoard(originalBoard);
+
+                    }
+                }
+                break;
+            case 2:
+                foreach (TreeNode<List<TileClass>> node in moveTree.Children)
+                {
+                    foreach (TreeNode<List<TileClass>> node2 in node.Children)
+                    {
+                        childrenCount++;
+                        for (int i = 0; i < width; i++)
+                        {
+                            List<TileClass> originalBoard = duplicateBoard(allTiles);
+
+                            allTiles = duplicateBoard(node2.Value);
+
+                            placeTokenOnTurn(i, maxingPlayer);
+                            node2.AddChild(duplicateBoard(allTiles));
+
+                            allTiles = duplicateBoard(originalBoard);
+
+                        }
+                    }
+                }
+                break;
+            case 3:
+                foreach (TreeNode<List<TileClass>> node in moveTree.Children)
+                {
+                    foreach (TreeNode<List<TileClass>> node2 in node.Children)
+                    {
+                        foreach (TreeNode<List<TileClass>> node3 in node2.Children)
+                        {
+                            childrenCount++;
+                            for (int i = 0; i < width; i++)
+                            {
+                                List<TileClass> originalBoard = duplicateBoard(allTiles);
+
+                                allTiles = duplicateBoard(node3.Value);
+
+                                placeTokenOnTurn(i, maxingPlayer);
+                                node3.AddChild(duplicateBoard(allTiles));
+
+                                allTiles = duplicateBoard(originalBoard);
+
+                            }
+                        }
+                    }
+                }
+                break;
+            case 4:
+                foreach (TreeNode<List<TileClass>> node in moveTree.Children)
+                {
+                    foreach (TreeNode<List<TileClass>> node2 in node.Children)
+                    {
+                        foreach (TreeNode<List<TileClass>> node3 in node2.Children)
+                        {
+                            foreach (TreeNode<List<TileClass>> node4 in node3.Children)
+                            {
+                                childrenCount++;
+                                for (int i = 0; i < width; i++)
+                                {
+                                    List<TileClass> originalBoard = duplicateBoard(allTiles);
+
+                                    allTiles = duplicateBoard(node4.Value);
+
+                                    placeTokenOnTurn(i, maxingPlayer);
+                                    node4.AddChild(duplicateBoard(allTiles));
+
+                                    allTiles = duplicateBoard(originalBoard);
+
+                                }
+                            }
+                        }
+                    }
+                }
+                break;
+            case 5:
+                foreach (TreeNode<List<TileClass>> node in moveTree.Children)
+                {
+                    foreach (TreeNode<List<TileClass>> node2 in node.Children)
+                    {
+                        foreach (TreeNode<List<TileClass>> node3 in node2.Children)
+                        {
+                            foreach (TreeNode<List<TileClass>> node4 in node3.Children)
+                            {
+                                foreach (TreeNode<List<TileClass>> node5 in node4.Children)
+                                {
+                                    childrenCount++;
+                                    for (int i = 0; i < width; i++)
+                                    {
+                                        List<TileClass> originalBoard = duplicateBoard(allTiles);
+
+                                        allTiles = duplicateBoard(node5.Value);
+
+                                        placeTokenOnTurn(i, maxingPlayer);
+                                        node5.AddChild(duplicateBoard(allTiles));
+
+                                        allTiles = duplicateBoard(originalBoard);
+
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                break;
+
         }
 
     }
 
+    /// <summary>
+    /// builds the tree at the current game state
+    /// </summary>
+    void buildTree(bool player1Starting)
+    {
+        moveTree = new TreeNode<List<TileClass>>(duplicateBoard(allTiles));
+
+        populateChildren(0, player1Starting);
+        populateChildren(1, !player1Starting);
+        populateChildren(2, player1Starting);
+        populateChildren(3, !player1Starting);
+        populateChildren(4, player1Starting);
+    }
+
+
     int miniMax(int depth, bool maxingPlayer)
     {
+        print("Hi from minimax");
         int score = 0;
         int bestScore = 0;
         int bestMove = -1;
+
+       
 
         //check if terminal and return heuristic value
 
 
 
         //evaluate all possible moves at this depth
-        foreach(TreeNode<List<TileClass>> board in moveTree[depth].Children)
-        {
-            //call minimaax on that new board
+        //foreach (TreeNode<List<TileClass>> board in moveTree[depth].Children)
+        //{
+        //    //call minimaax on that new board
 
-            //check if that move is better than any of the other moves and overwrite it
-            if (maxingPlayer)
-            {
+        //    //check if that move is better than any of the other moves and overwrite it
+        //    if (maxingPlayer)
+        //    {
 
-            }
-            else
-            {
+        //    }
+        //    else
+        //    {
 
-            }
-        }
+        //    }
+        //}
 
 
 
