@@ -7,16 +7,19 @@ public class GridManager : MonoBehaviour
 {
     [SerializeField] int width, height, amountToConnect;
     [SerializeField] Tile tile;
-    [SerializeField] Transform camera;
     [SerializeField] InputField input;
     [SerializeField] Text winText;
     bool player1Turn;
+
+    Tile[] tileObjects;
+    List<TileClass> allTiles = new List<TileClass>();
 
     private void Start()
     {
         generateGrid();
         player1Turn = true;
         winText.gameObject.SetActive(false);
+        tileObjects = FindObjectsOfType<Tile>();
     }
 
     void generateGrid()
@@ -26,24 +29,42 @@ public class GridManager : MonoBehaviour
             for (int y = 0; y < height; y++)
             {
                 var spawnedTile = Instantiate(tile, new Vector3(x, y), Quaternion.identity);
+                TileClass tempStruct = new TileClass();
                 spawnedTile.name = $"Tile {x} {y}";
                 spawnedTile.width = width;
                 spawnedTile.height = height;
                 spawnedTile.gridManager = this;
+
+                tempStruct.x = x;
+                tempStruct.y = y;
+                tempStruct.currentState = TileClass.states.none;
+                allTiles.Add(tempStruct);
             }
         }
         float avg = (width + height) / 1.5f;
-        camera.position = new Vector3(width/2f - .5f, height/2f -.5f, - avg);
+        GameObject.FindGameObjectWithTag("MainCamera").transform.position = new Vector3(width/2f - .5f, height/2f -.5f, - avg);
     }
 
-    public Tile getTileAtPosition(int x, int y)
+    Tile getTileObject(TileClass t)
     {
-        Tile[] tiles = FindObjectsOfType<Tile>();
-
-        foreach(Tile t in tiles)
+        foreach(Tile tile in tileObjects)
         {
-            if(t.transform.position.x == x && t.transform.position.y == y)
+            if (tile.transform.position.x == t.x && tile.transform.position.y == t.y)
             {
+                return tile;
+            }
+        }
+
+        return null; 
+    }
+
+    public TileClass getTileAtPosition(int x, int y)
+    {
+        foreach(TileClass t in allTiles)
+        {
+            if (t.x == x && t.y == y)
+            {
+                
                 return t;
             }
         }
@@ -53,9 +74,9 @@ public class GridManager : MonoBehaviour
     /// <summary>
     /// gets the lowest unoccupied tile in the column
     /// </summary>
-    public Tile getLowest(int x, int y)
+    public TileClass getLowest(int x, int y)
     {
-        if (getTileAtPosition(x, y).currentState != Tile.states.none)
+        if (getTileAtPosition(x, y).currentState != TileClass.states.none)
         {
             return getTileAtPosition(x, y + 1);
         }
@@ -71,9 +92,7 @@ public class GridManager : MonoBehaviour
 
     public void placeToken()
     {
-        print(getTileAtPosition(int.Parse(input.text), height-1).name);
-
-        Tile t = new Tile();
+        TileClass t = getLowest(int.Parse(input.text), height - 1);
 
         if (int.Parse(input.text) < height)
         {
@@ -84,14 +103,11 @@ public class GridManager : MonoBehaviour
         {
             if (player1Turn)
             {
-                print("this one");
-                t.currentState = Tile.states.player1;
-                t.GetComponent<SpriteRenderer>().color = Color.red;
+                t.currentState = TileClass.states.player1;
             }
             else
             {
-                t.currentState = Tile.states.player2;
-                t.GetComponent<SpriteRenderer>().color = Color.yellow;
+                t.currentState = TileClass.states.player2;
             }
 
             int highest = getHighestMatch(t);
@@ -113,70 +129,82 @@ public class GridManager : MonoBehaviour
                 }
             }
 
+
+            print(heuristic(allTiles, player1Turn));
+
+            if (player1Turn)
+            {
+                getTileObject(t).GetComponent<SpriteRenderer>().color = Color.red;
+            }
+            else
+            {
+                getTileObject(t).GetComponent<SpriteRenderer>().color = Color.yellow;
+            }
+
             player1Turn = !player1Turn;
         }
 
     }
 
-    int getHighestMatch(Tile t)
+    int getHighestMatch(TileClass t)
     {
         int currentMax = 0;
 
         //check up and down
-        while (getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1) != null && getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y-1).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x, (int)t.y - 1) != null && getTileAtPosition((int)t.x, (int)t.y-1).currentState == t.currentState)
         {
-            t = getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1);
+            t = getTileAtPosition((int)t.x, (int)t.y - 1);
         }
 
         int numInRow = 1;
-        while (getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y + 1).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x, (int)t.y + 1).currentState == t.currentState)
         {
-            t = getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y + 1);
+            t = getTileAtPosition((int)t.x, (int)t.y + 1);
             numInRow++;
         }
 
         currentMax = Mathf.Max(numInRow, currentMax);
 
         //check left and right
-        while (getTileAtPosition((int)t.transform.position.x-1, (int)t.transform.position.y) != null && getTileAtPosition((int)t.transform.position.x-1, (int)t.transform.position.y).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x-1, (int)t.y) != null && getTileAtPosition((int)t.x-1, (int)t.y).currentState == t.currentState)
         {
-            t = getTileAtPosition((int)t.transform.position.x-1, (int)t.transform.position.y);
+            t = getTileAtPosition((int)t.x-1, (int)t.y);
         }
 
         numInRow = 1;
-        while (getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y) != null && getTileAtPosition((int)t.transform.position.x+1, (int)t.transform.position.y).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x + 1, (int)t.y) != null && getTileAtPosition((int)t.x+1, (int)t.y).currentState == t.currentState)
         {
-            t = getTileAtPosition((int)t.transform.position.x+1, (int)t.transform.position.y);
+            t = getTileAtPosition((int)t.x+1, (int)t.y);
             numInRow++;
         }
 
         currentMax = Mathf.Max(numInRow, currentMax);
 
         //check diagonal left
-        while (getTileAtPosition((int)t.transform.position.x-1, (int)t.transform.position.y - 1) != null && getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y-1).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x-1, (int)t.y - 1) != null && getTileAtPosition((int)t.x - 1, (int)t.y-1).currentState == t.currentState)
         {
-            t = getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y-1);
+            t = getTileAtPosition((int)t.x - 1, (int)t.y-1);
         }
 
         numInRow = 1;
-        while (getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y + 1) != null && getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y+1).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x + 1, (int)t.y + 1) != null && getTileAtPosition((int)t.x + 1, (int)t.y+1).currentState == t.currentState)
         {
-            t = getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y+1);
+            t = getTileAtPosition((int)t.x + 1, (int)t.y+1);
             numInRow++;
         }
 
         currentMax = Mathf.Max(numInRow, currentMax);
 
         //check diagonal right
-        while (getTileAtPosition((int)t.transform.position.x+1, (int)t.transform.position.y - 1) != null && getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y - 1).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x+1, (int)t.y - 1) != null && getTileAtPosition((int)t.x + 1, (int)t.y - 1).currentState == t.currentState)
         {
-            t = getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y - 1);
+            t = getTileAtPosition((int)t.x + 1, (int)t.y - 1);
         }
 
         numInRow = 1;
-        while (getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y + 1) != null && getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y + 1).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x - 1, (int)t.y + 1) != null && getTileAtPosition((int)t.x - 1, (int)t.y + 1).currentState == t.currentState)
         {
-            t = getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y + 1);
+            t = getTileAtPosition((int)t.x - 1, (int)t.y + 1);
             numInRow++;
         }
 
@@ -185,74 +213,82 @@ public class GridManager : MonoBehaviour
         return currentMax;
     }
 
-    int heuristic(List<Tile> inputBoard, bool isPlayer1)
+    int heuristic(List<TileClass> inputBoard, bool isPlayer1)
     {
         int score = 0;
 
-        foreach(Tile t in inputBoard)
+        foreach(TileClass t in inputBoard)
         {
             if (isPlayer1)
             {
-                if (t.currentState == Tile.states.player1)
+                if (t.currentState == TileClass.states.player1)
                 {
-                    score += evalTile(t);
+                    //how close to the center is it
+                    score -= (int)Mathf.Abs(t.x - (float)width) * 30;
 
-                    
+                    //how many total are in a row for each direction with better score for the higher the amount in a row is 
+                    score += getAmountInEachDirection(t) * 2;
+
+
+                    //how many can be in a row in the future
+                    score += getHighestWithBlanks(t);
+
+
                 }
-                else if (t.currentState == Tile.states.player2)
+                else if (t.currentState == TileClass.states.player2)
                 {
-                    score -= evalTile(t);
+                    //how close to the center is it
+                    score += (int)Mathf.Abs(t.x - (float)width) * 30;
+
+                    //how many total are in a row for each direction with better score for the higher the amount in a row is 
+                    score -= getAmountInEachDirection(t) * 2;
+
                 }
             }
             else
             {
-                if (t.currentState == Tile.states.player1)
+                if (t.currentState == TileClass.states.player1)
                 {
-                    score -= evalTile(t);
+                    //how close to the center is it
+                    score += (int)Mathf.Abs(t.x - (float)width) * 30;
+
+                    //how many total are in a row for each direction with better score for the higher the amount in a row is 
+                    score -= getAmountInEachDirection(t) * 2;
+
+
+                    //how many can be in a row in the future
+                    score -= getHighestWithBlanks(t);
                 }
-                else if (t.currentState == Tile.states.player2)
+                else if (t.currentState == TileClass.states.player2)
                 {
-                    score += evalTile(t);
+                    //how close to the center is it
+                    score -= (int)Mathf.Abs(t.x - (float)width) * 30;
+
+                    //how many total are in a row for each direction with better score for the higher the amount in a row is 
+                    score += getAmountInEachDirection(t) * 2;
                 }
             }
         }
         return score;
     }
 
-    int evalTile(Tile t)
-    {
-        int score = 0;
 
-        //how close to the center is it
-        score -= (int)Mathf.Abs(t.transform.position.x - (float)width) * 30;
-
-        //how many total are in a row for each direction with better score for the higher the amount in a row is 
-        score += getAmountInEachDirection(t)*2;
-
-
-        //how many can be in a row in the future
-        score += getHighestWithBlanks(t);
-
-
-        return score;
-    }
-
-    int getAmountInEachDirection(Tile t)
+    int getAmountInEachDirection(TileClass t)
     {
         int score = 0;
 
         int currentMax = 0;
 
         //check up and down
-        while (getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1) != null && getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x, (int)t.y - 1) != null && getTileAtPosition((int)t.x, (int)t.y - 1).currentState == t.currentState)
         {
-            t = getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1);
+            t = getTileAtPosition((int)t.x, (int)t.y - 1);
         }
 
         int numInRow = 1;
-        while (getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y + 1).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x, (int)t.y + 1).currentState == t.currentState)
         {
-            t = getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y + 1);
+            t = getTileAtPosition((int)t.x, (int)t.y + 1);
             numInRow++;
         }
 
@@ -260,15 +296,15 @@ public class GridManager : MonoBehaviour
         currentMax = 0;
 
         //check left and right
-        while (getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y) != null && getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x - 1, (int)t.y) != null && getTileAtPosition((int)t.x - 1, (int)t.y).currentState == t.currentState)
         {
-            t = getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y);
+            t = getTileAtPosition((int)t.x - 1, (int)t.y);
         }
 
         numInRow = 1;
-        while (getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y) != null && getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x + 1, (int)t.y) != null && getTileAtPosition((int)t.x + 1, (int)t.y).currentState == t.currentState)
         {
-            t = getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y);
+            t = getTileAtPosition((int)t.x + 1, (int)t.y);
             numInRow++;
         }
 
@@ -276,15 +312,15 @@ public class GridManager : MonoBehaviour
         currentMax = 0;
 
         //check diagonal left
-        while (getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y - 1) != null && getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y - 1).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x - 1, (int)t.y - 1) != null && getTileAtPosition((int)t.x - 1, (int)t.y - 1).currentState == t.currentState)
         {
-            t = getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y - 1);
+            t = getTileAtPosition((int)t.x - 1, (int)t.y - 1);
         }
 
         numInRow = 1;
-        while (getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y + 1) != null && getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y + 1).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x + 1, (int)t.y + 1) != null && getTileAtPosition((int)t.x + 1, (int)t.y + 1).currentState == t.currentState)
         {
-            t = getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y + 1);
+            t = getTileAtPosition((int)t.x + 1, (int)t.y + 1);
             numInRow++;
         }
 
@@ -292,15 +328,15 @@ public class GridManager : MonoBehaviour
         currentMax = 0;
 
         //check diagonal right
-        while (getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y - 1) != null && getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y - 1).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x + 1, (int)t.y - 1) != null && getTileAtPosition((int)t.x + 1, (int)t.y - 1).currentState == t.currentState)
         {
-            t = getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y - 1);
+            t = getTileAtPosition((int)t.x + 1, (int)t.y - 1);
         }
 
         numInRow = 1;
-        while (getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y + 1) != null && getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y + 1).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x - 1, (int)t.y + 1) != null && getTileAtPosition((int)t.x - 1, (int)t.y + 1).currentState == t.currentState)
         {
-            t = getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y + 1);
+            t = getTileAtPosition((int)t.x - 1, (int)t.y + 1);
             numInRow++;
         }
 
@@ -309,104 +345,88 @@ public class GridManager : MonoBehaviour
         return score;
     }
 
-    int getHighestWithBlanks(Tile t)
+    int getHighestWithBlanks(TileClass t)
     {
          int currentMax = 0;
 
-        //check up and down
-        while (getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1) != null && getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y-1).currentState == t.currentState)
-        {
-            t = getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1);
-        }
-
+        
         int numInRow = 1;
         int numNull = 0;
-        while (getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y + 1).currentState == t.currentState || getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1).currentState == Tile.states.none)
-        {
-            if(t.currentState == Tile.states.none)
-            {
-                numNull++;
-            }
-            t = getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y + 1);
-            numInRow++;
-        }
-
-        currentMax = Mathf.Max(numInRow, currentMax);
-        if(currentMax ==amountToConnect && numNull == 1)
-        {
-            return 999999;
-        }
+       
 
         //check left and right
-        while (getTileAtPosition((int)t.transform.position.x-1, (int)t.transform.position.y) != null && getTileAtPosition((int)t.transform.position.x-1, (int)t.transform.position.y).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x-1, (int)t.y) != null && getTileAtPosition((int)t.x-1, (int)t.y).currentState == t.currentState)
         {
-            t = getTileAtPosition((int)t.transform.position.x-1, (int)t.transform.position.y);
+            t = getTileAtPosition((int)t.x-1, (int)t.y);
         }
 
         numInRow = 1;
         numNull = 0;
-        while (getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y) != null && (getTileAtPosition((int)t.transform.position.x+1, (int)t.transform.position.y).currentState == t.currentState || getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1).currentState == Tile.states.none))
+        while (getTileAtPosition((int)t.x + 1, (int)t.y) != null && (getTileAtPosition((int)t.x+1, (int)t.y).currentState == t.currentState || getTileAtPosition((int)t.x+1, (int)t.y).currentState == TileClass.states.none))
         {
-            if (t.currentState == Tile.states.none)
+            if (t.currentState == TileClass.states.none)
             {
                 numNull++;
             }
-            t = getTileAtPosition((int)t.transform.position.x+1, (int)t.transform.position.y);
+            t = getTileAtPosition((int)t.x+1, (int)t.y);
             numInRow++;
         }
 
         currentMax = Mathf.Max(numInRow, currentMax);
-        if (currentMax == amountToConnect && numNull == 1)
+        if (numInRow == amountToConnect - 1 && numNull == 1)
         {
-            return 999999;
+            print("LR");
+            return 1000;
         }
 
         //check diagonal left
-        while (getTileAtPosition((int)t.transform.position.x-1, (int)t.transform.position.y - 1) != null && getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y-1).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x-1, (int)t.y - 1) != null && getTileAtPosition((int)t.x - 1, (int)t.y-1).currentState == t.currentState)
         {
-            t = getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y-1);
+            t = getTileAtPosition((int)t.x - 1, (int)t.y-1);
         }
 
         numInRow = 1;
         numNull = 0;
-        while (getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y + 1) != null && (getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y).currentState == t.currentState || getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1).currentState == Tile.states.none))
+        while (getTileAtPosition((int)t.x + 1, (int)t.y + 1) != null && (getTileAtPosition((int)t.x + 1, (int)t.y+1).currentState == t.currentState || getTileAtPosition((int)t.x+1, (int)t.y+1).currentState == TileClass.states.none))
         {
-            if (t.currentState == Tile.states.none)
+            if (t.currentState == TileClass.states.none)
             {
                 numNull++;
             }
-            t = getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y+1);
+            t = getTileAtPosition((int)t.x + 1, (int)t.y+1);
             numInRow++;
         }
 
         currentMax = Mathf.Max(numInRow, currentMax);
-        if (currentMax == amountToConnect && numNull == 1)
+        if (numInRow == amountToConnect - 1 && numNull == 1)
         {
-            return 999999;
+            print("DL");
+            return 1000;
         }
 
         //check diagonal right
-        while (getTileAtPosition((int)t.transform.position.x+1, (int)t.transform.position.y - 1) != null && getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y - 1).currentState == t.currentState)
+        while (getTileAtPosition((int)t.x+1, (int)t.y - 1) != null && getTileAtPosition((int)t.x + 1, (int)t.y - 1).currentState == t.currentState)
         {
-            t = getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y - 1);
+            t = getTileAtPosition((int)t.x + 1, (int)t.y - 1);
         }
 
         numInRow = 1;
         numNull = 0;
-        while (getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y + 1) != null && (getTileAtPosition((int)t.transform.position.x + 1, (int)t.transform.position.y).currentState == t.currentState || getTileAtPosition((int)t.transform.position.x, (int)t.transform.position.y - 1).currentState == Tile.states.none))
+        while (getTileAtPosition((int)t.x - 1, (int)t.y + 1) != null && (getTileAtPosition((int)t.x - 1, (int)t.y+1).currentState == t.currentState || getTileAtPosition((int)t.x-1, (int)t.y + 1).currentState == TileClass.states.none))
         {
-            if (t.currentState == Tile.states.none)
+            if (t.currentState == TileClass.states.none)
             {
                 numNull++;
             }
-            t = getTileAtPosition((int)t.transform.position.x - 1, (int)t.transform.position.y + 1);
+            t = getTileAtPosition((int)t.x - 1, (int)t.y + 1);
             numInRow++;
         }
 
         currentMax = Mathf.Max(numInRow, currentMax);
-        if (currentMax == amountToConnect && numNull == 1)
+        if (numInRow == amountToConnect - 1 && numNull == 1)
         {
-            return 999999;
+            print("DR");
+            return 1000;
         }
 
         return currentMax * 10;

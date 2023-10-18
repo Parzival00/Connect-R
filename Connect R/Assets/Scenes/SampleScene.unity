@@ -581,11 +581,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b99744998618e94c8288f1b4deee172, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  width: 8
-  height: 8
+  width: 7
+  height: 7
   amountToConnect: 4
   tile: {fileID: 278401429180731926, guid: bad7198a3f74ca74e9b7aa9595d49127, type: 3}
-  camera: {fileID: 519420032}
   input: {fileID: 2142865730}
   winText: {fileID: 327651418}
 --- !u!4 &1083235375

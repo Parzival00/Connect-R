@@ -8,12 +8,8 @@ public class Tile : MonoBehaviour
     [HideInInspector] public GridManager gridManager;
     [HideInInspector] public bool occupied = false;
 
-    Color yellow = new Color(255, 200, 0);
-    Color red = new Color(200, 20, 0);
-    Color white = new Color(255, 255, 255);
-
-    SpriteRenderer renderer;
-
+    //SpriteRenderer renderer;
+    
     public enum states
     {
         none, player1, player2
@@ -23,23 +19,12 @@ public class Tile : MonoBehaviour
     private void Start()
     {
         currentState = states.none;
-        renderer = this.GetComponent<SpriteRenderer>();
+       // renderer = this.GetComponent<SpriteRenderer>();
     }
 
     private void Update()
     {
-        //switch (currentState)
-        //{
-        //    case states.none:
-        //        renderer.color = white;
-        //        break;
-        //    case states.player1:
-        //        renderer.color = red;
-        //        break;
-        //    case states.player2:
-        //        renderer.color = yellow;
-        //        break;
-        //}
+
     }
 
 
