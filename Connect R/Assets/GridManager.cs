@@ -11,6 +11,7 @@ public class GridManager : MonoBehaviour
     [SerializeField] int amountToConnect;
     [SerializeField] Tile tile;
     [SerializeField] bool useDebugSettings;
+    int maximumDepth = 5;
 
     [Header("Object References")]
     [SerializeField] InputField input;
@@ -28,12 +29,15 @@ public class GridManager : MonoBehaviour
     Tile[] tileObjects;
     List<TileClass> allTiles = new List<TileClass>();
 
+    TreeNode<List<TileClass>> moveTree;
+
     private void Start()
     {
         //generateGrid();
         player1Turn = true;
         winText.gameObject.SetActive(false);
         tileObjects = FindObjectsOfType<Tile>();
+        moveTree = new TreeNode<List<TileClass>>(allTiles);
     }
 
     public void generateGrid()
@@ -457,4 +461,54 @@ public class GridManager : MonoBehaviour
         return currentMax * 10;
     }
 
+    void makeTree()
+    {
+        //try all of the possible moves that can be made
+        //the number of potential moves a player can do is equal to the width of the board
+        for (int i = 0; i < width; i++)
+        {
+            for (int j = 0; j < maximumDepth; j++)
+            {
+                //add the tile to the a new identical board at position i
+                List<TileClass> newBoard = new List<TileClass>();
+
+
+                moveTree[j].AddChild(newBoard);
+            }
+        }
+
+    }
+
+    int miniMax(int depth, bool maxingPlayer)
+    {
+        int score = 0;
+        int bestScore = 0;
+        int bestMove = -1;
+
+        //check if terminal and return heuristic value
+
+
+
+        //evaluate all possible moves at this depth
+        foreach(TreeNode<List<TileClass>> board in moveTree[depth].Children)
+        {
+            //call minimaax on that new board
+
+            //check if that move is better than any of the other moves and overwrite it
+            if (maxingPlayer)
+            {
+
+            }
+            else
+            {
+
+            }
+        }
+
+
+
+        //do and return the best move
+
+        return score;
+    }
 }
