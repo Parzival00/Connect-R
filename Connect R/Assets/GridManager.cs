@@ -11,7 +11,7 @@ public class GridManager : MonoBehaviour
     [SerializeField] int amountToConnect;
     [SerializeField] Tile tile;
     [SerializeField] bool useDebugSettings;
-    int maximumDepth = 2;
+    int maximumDepth = 5;
 
     [Header("Object References")]
     [SerializeField] InputField input;
@@ -219,7 +219,12 @@ public class GridManager : MonoBehaviour
                 return;
             }
 
-            
+            //int score = 0;
+            //score += (width - (int)Mathf.Abs(t.x - Mathf.Floor((float)width / 2))) * 10;
+            //score += getHighestMatch(t) * 20;
+            //score += getHighestWithBlanks(t) * 3;
+
+            //print(score);
 
             player1Turn = !player1Turn;
 
@@ -389,95 +394,32 @@ public class GridManager : MonoBehaviour
         return currentMax;
     }
 
-    int heuristic(List<TileClass> inputBoard, bool isPlayer1)
+    int heuristic(TreeNode<List<TileClass>> inputBoard, bool isPlayer1)
     {
         int score = 0;
 
-        foreach(TileClass t in inputBoard)
+
+        for (int i = 0; i < allTiles.Count; i++)
         {
-            if (t.currentState == TileClass.states.player1)
+            if (inputBoard.Value[i].currentState != inputBoard.Parent.Value[i].currentState)
             {
-                //how close to the center is it
-                score +=(width+1- (int)Mathf.Abs(t.x + 1 - (float)width / 2) )* 10;
-                print((int)Mathf.Abs(t.x + 1 - (float)width / 2));
-                //how many total are in a row for each direction with better score for the higher the amount in a row is 
-                //score += getAmountInEachDirection(t) * 20;
-
-                score += getHighestMatch(t) * 20;
-                print(getHighestMatch(t));
-
-                //how many can be in a row in the future
-                score += getHighestWithBlanks(t)*3;
-
+                if (inputBoard.Value[i].currentState == TileClass.states.player1)
+                {
+                    score += (width - (int)Mathf.Abs(inputBoard.Value[i].x - Mathf.Floor((float)width / 2))) * 10;
+                    //score += getHighestMatch(inputBoard.Value[i]) * 20;
+                    //score += getHighestWithBlanks(inputBoard.Value[i]) * 3;
+                }
+                else
+                {
+                    score -= (width - (int)Mathf.Abs(inputBoard.Value[i].x - Mathf.Floor((float)width / 2))) * 10;
+                    //score -= getHighestMatch(inputBoard.Value[i]) * 20;
+                    //score -= getHighestWithBlanks(inputBoard.Value[i]) * 3;
+                }
+                
 
             }
-            else if (t.currentState == TileClass.states.player2)
-            {
-                //how close to the center is it
-                score -= (width+1 - (int)Mathf.Abs(t.x + 1 - (float)width / 2)) * 10;
-
-                //how many total are in a row for each direction with better score for the higher the amount in a row is 
-                //score -= getAmountInEachDirection(t) * 20;
-
-                score -= getHighestMatch(t) * 20;
-
-                //how many can be in a row in the future
-                score -= getHighestWithBlanks(t) *3;
-
-            }
-
-
-
-            //if (isPlayer1)
-            //{
-            //    if (t.currentState == TileClass.states.player1)
-            //    {
-            //        //how close to the center is it
-            //        score -= (int)Mathf.Abs(t.x+1 - (float)width/2) * 30;
-
-            //        //how many total are in a row for each direction with better score for the higher the amount in a row is 
-            //        score += getAmountInEachDirection(t) * 2;
-
-
-            //        //how many can be in a row in the future
-            //        score += getHighestWithBlanks(t);
-
-
-            //    }
-            //    else if (t.currentState == TileClass.states.player2)
-            //    {
-            //        //how close to the center is it
-            //        score += (int)Mathf.Abs(t.x - (float)width) * 30;
-
-            //        //how many total are in a row for each direction with better score for the higher the amount in a row is 
-            //        score -= getAmountInEachDirection(t) * 2;
-
-            //    }
-            //}
-            //else
-            //{
-            //    if (t.currentState == TileClass.states.player2)
-            //    {
-            //        //how close to the center is it
-            //        score -= (int)Mathf.Abs(t.x + 1 - (float)width/2) * 30;
-
-            //        //how many total are in a row for each direction with better score for the higher the amount in a row is 
-            //        score += getAmountInEachDirection(t) * 2;
-
-
-            //        //how many can be in a row in the future
-            //        score += getHighestWithBlanks(t);
-            //    }
-            //    else if (t.currentState == TileClass.states.player2)
-            //    {
-            //        //how close to the center is it
-            //        score -= (int)Mathf.Abs(t.x - (float)width) * 30;
-
-            //        //how many total are in a row for each direction with better score for the higher the amount in a row is 
-            //        score += getAmountInEachDirection(t) * 2;
-            //    }
-            //}
         }
+        
         return score;
     }
 
@@ -561,6 +503,8 @@ public class GridManager : MonoBehaviour
         
         int numInRow = 1;
         int numNull = 0;
+
+        TileClass t2 = duplicateTile(t);
        
 
         //check left and right
@@ -573,21 +517,40 @@ public class GridManager : MonoBehaviour
         numNull = 0;
         while (getTileAtPosition((int)t.x + 1, (int)t.y) != null && (getTileAtPosition((int)t.x+1, (int)t.y).currentState == t.currentState || getTileAtPosition((int)t.x+1, (int)t.y).currentState == TileClass.states.none))
         {
+            
             if (t.currentState == TileClass.states.none)
             {
                 numNull++;
+
+                if (numNull >= 1 )
+                {
+
+                    if(getTileAtPosition((int)t.x - 3, (int)t.y)!= null && getTileAtPosition((int)t.x-3, (int)t.y).currentState == getTileAtPosition((int)t.x - 1, (int)t.y).currentState && getTileAtPosition((int)t.x - 1, (int)t.y).currentState != TileClass.states.none)
+                    {
+                        numInRow++;
+                    }
+
+                    if (numInRow >= amountToConnect)
+                    {
+
+                        return 1000;
+                    }
+                    
+                    break;
+                }
+                
+
+
             }
-            t = getTileAtPosition((int)t.x+1, (int)t.y);
             numInRow++;
+            t = getTileAtPosition((int)t.x+1, (int)t.y);
+            
         }
 
-        currentMax = Mathf.Max(numInRow, currentMax);
-        if (numInRow == amountToConnect - 1 && numNull == 1)
-        {
-            return 1000;
-        }
+        currentMax = Mathf.Max(currentMax, numInRow);
+        t = duplicateTile(t2);
 
-        //check diagonal left
+        //check diagonal right
         while (getTileAtPosition((int)t.x-1, (int)t.y - 1) != null && getTileAtPosition((int)t.x - 1, (int)t.y-1).currentState == t.currentState)
         {
             t = getTileAtPosition((int)t.x - 1, (int)t.y-1);
@@ -597,21 +560,36 @@ public class GridManager : MonoBehaviour
         numNull = 0;
         while (getTileAtPosition((int)t.x + 1, (int)t.y + 1) != null && (getTileAtPosition((int)t.x + 1, (int)t.y+1).currentState == t.currentState || getTileAtPosition((int)t.x+1, (int)t.y+1).currentState == TileClass.states.none))
         {
-            if (t.currentState == TileClass.states.none)
+            if(t.currentState == TileClass.states.none)
             {
                 numNull++;
+                if (numNull >= 1)
+                {
+
+                    if (getTileAtPosition((int)t.x - 3, (int)t.y - 3) != null && getTileAtPosition((int)t.x - 3, (int)t.y - 3).currentState == getTileAtPosition((int)t.x - 1, (int)t.y - 1).currentState && getTileAtPosition((int)t.x - 1, (int)t.y - 1).currentState != TileClass.states.none)
+                    {
+                        numInRow++;
+                    }
+
+                    if (numInRow >= amountToConnect)
+                    {
+
+                        return 1000;
+                    }
+
+                    break;
+                }
+
             }
-            t = getTileAtPosition((int)t.x + 1, (int)t.y+1);
             numInRow++;
+            t = getTileAtPosition((int)t.x + 1, (int)t.y+1);
+            
         }
 
-        currentMax = Mathf.Max(numInRow, currentMax);
-        if (numInRow == amountToConnect - 1 && numNull == 1)
-        {
-            return 1000;
-        }
+        currentMax = Mathf.Max(currentMax, numInRow);
+        t = duplicateTile(t2);
 
-        //check diagonal right
+        //check diagonal left
         while (getTileAtPosition((int)t.x+1, (int)t.y - 1) != null && getTileAtPosition((int)t.x + 1, (int)t.y - 1).currentState == t.currentState)
         {
             t = getTileAtPosition((int)t.x + 1, (int)t.y - 1);
@@ -624,16 +602,30 @@ public class GridManager : MonoBehaviour
             if (t.currentState == TileClass.states.none)
             {
                 numNull++;
+
+                if (numNull >= 1)
+                {
+                    if (getTileAtPosition((int)t.x + 2, (int)t.y - 2) != null && getTileAtPosition((int)t.x + 2, (int)t.y - 2).currentState == getTileAtPosition((int)t.x + 1, (int)t.y - 1).currentState && getTileAtPosition((int)t.x + 1, (int)t.y - 1).currentState != TileClass.states.none)
+                    {
+                        numInRow++;
+                    }
+
+                    if (numInRow >= amountToConnect)
+                    {
+                        return 1000;
+                    }
+
+                    break;
+                }
+
             }
-            t = getTileAtPosition((int)t.x - 1, (int)t.y + 1);
             numInRow++;
+            t = getTileAtPosition((int)t.x - 1, (int)t.y + 1);
+
+            
         }
 
-        currentMax = Mathf.Max(numInRow, currentMax);
-        if (numInRow == amountToConnect - 1 && numNull == 1)
-        {
-            return 1000;
-        }
+        currentMax = Mathf.Max(currentMax, numInRow);
 
         return currentMax * 10;
     }
@@ -644,7 +636,6 @@ public class GridManager : MonoBehaviour
     void populateChildren(int currentDepth, bool maxingPlayer)
     {
         //I truly am sorry for the way I ended up doing this, but I worked for well over 5 hours just on this iteration of the tree. I already had restarted before this
-        print("in depth " + currentDepth);
         switch (currentDepth)
         {
             case 0:
@@ -800,12 +791,13 @@ public class GridManager : MonoBehaviour
         populateChildren(2, player1Starting);
         populateChildren(3, !player1Starting);
         populateChildren(4, player1Starting);
+        populateChildren(5, !player1Starting);
     }
 
 
     int miniMax(TreeNode<List<TileClass>> node, int depth, bool maxingPlayer)
     {
-        int score = heuristic(node.Value, maxingPlayer);
+        int score = heuristic(node, maxingPlayer);
         int bestScore = 0;
 
         //check terminal
@@ -814,26 +806,30 @@ public class GridManager : MonoBehaviour
             return score;
         }
 
-       
 
-  
+
+
+
         //check if that move is better than any of the other moves and overwrite it
         if (maxingPlayer)
         {
+
             bestScore = int.MinValue;
             //evaluate all possible moves at this depth
             foreach (TreeNode<List<TileClass>> board in node.Children)
             {
+                
                 //call minimaax on that new board
                 score = miniMax(board, depth + 1, !maxingPlayer);
 
                 bestScore = Mathf.Max(score, bestScore);
 
             }
-            
+
         }
         else
         {
+
             bestScore = int.MaxValue;
             //evaluate all possible moves at this depth
             foreach (TreeNode<List<TileClass>> board in node.Children)
@@ -844,14 +840,9 @@ public class GridManager : MonoBehaviour
                 bestScore = Mathf.Min(score, bestScore);
 
             }
-            
+
 
         }
-
-
-
-
-        //print("current best: " + bestScore);
 
         //return the best score
         return bestScore;
@@ -869,7 +860,7 @@ public class GridManager : MonoBehaviour
 
             foreach (TreeNode<List<TileClass>> node in moveTree.Children)
             {
-                int score = miniMax(node, 0, true);
+                int score = miniMax(node, 1, true);
                 if (score > bestScore)
                 {
                     bestScore = score;
@@ -883,7 +874,7 @@ public class GridManager : MonoBehaviour
 
             foreach (TreeNode<List<TileClass>> node in moveTree.Children)
             {
-                int score = miniMax(node, 0, false);
+                int score = miniMax(node, 1, false);
                 if (score < bestScore)
                 {
                     bestScore = score;
