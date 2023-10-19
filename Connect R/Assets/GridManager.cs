@@ -190,6 +190,15 @@ public class GridManager : MonoBehaviour
                 t.currentState = TileClass.states.player2;
             }
 
+            if (player1Turn)
+            {
+                getTileObject(t).GetComponent<SpriteRenderer>().color = Color.red;
+            }
+            else
+            {
+                getTileObject(t).GetComponent<SpriteRenderer>().color = Color.yellow;
+            }
+
             int highest = getHighestMatch(t);
 
 
@@ -210,14 +219,7 @@ public class GridManager : MonoBehaviour
                 return;
             }
 
-            if (player1Turn)
-            {
-                getTileObject(t).GetComponent<SpriteRenderer>().color = Color.red;
-            }
-            else
-            {
-                getTileObject(t).GetComponent<SpriteRenderer>().color = Color.yellow;
-            }
+            
 
             player1Turn = !player1Turn;
 
@@ -278,6 +280,16 @@ public class GridManager : MonoBehaviour
             }
 
         }
+
+        if (player1Turn)
+        {
+            getTileObject(t).GetComponent<SpriteRenderer>().color = Color.red;
+        }
+        else
+        {
+            getTileObject(t).GetComponent<SpriteRenderer>().color = Color.yellow;
+        }
+
         int highest = getHighestMatch(t);
         if (highest >= amountToConnect)
         {
@@ -296,14 +308,7 @@ public class GridManager : MonoBehaviour
             return;
         }
 
-        if (player1Turn)
-        {
-            getTileObject(t).GetComponent<SpriteRenderer>().color = Color.red;
-        }
-        else
-        {
-            getTileObject(t).GetComponent<SpriteRenderer>().color = Color.yellow;
-        }
+        
 
         player1Turn = !player1Turn;
 
@@ -393,27 +398,27 @@ public class GridManager : MonoBehaviour
             if (t.currentState == TileClass.states.player1)
             {
                 //how close to the center is it
-                score -= (int)Mathf.Abs(t.x + 1 - (float)width / 2) * 30;
+                score -= (int)Mathf.Abs(t.x + 1 - (float)width / 2) * 10;
 
                 //how many total are in a row for each direction with better score for the higher the amount in a row is 
-                score += getAmountInEachDirection(t) * 2;
+                score += getAmountInEachDirection(t) * 20;
 
 
                 //how many can be in a row in the future
-                score += getHighestWithBlanks(t);
+                score += getHighestWithBlanks(t)*3;
 
 
             }
             else if (t.currentState == TileClass.states.player2)
             {
                 //how close to the center is it
-                score += (int)Mathf.Abs(t.x - (float)width) * 30;
+                score += (int)Mathf.Abs(t.x - (float)width) * 10;
 
                 //how many total are in a row for each direction with better score for the higher the amount in a row is 
-                score -= getAmountInEachDirection(t) * 2;
+                score -= getAmountInEachDirection(t) * 20;
 
                 //how many can be in a row in the future
-                score -= getHighestWithBlanks(t);
+                score -= getHighestWithBlanks(t) *3;
 
             }
 
