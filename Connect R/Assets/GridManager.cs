@@ -398,11 +398,13 @@ public class GridManager : MonoBehaviour
             if (t.currentState == TileClass.states.player1)
             {
                 //how close to the center is it
-                score -= (int)Mathf.Abs(t.x + 1 - (float)width / 2) * 10;
-
+                score +=(width+1- (int)Mathf.Abs(t.x + 1 - (float)width / 2) )* 10;
+                print((int)Mathf.Abs(t.x + 1 - (float)width / 2));
                 //how many total are in a row for each direction with better score for the higher the amount in a row is 
-                score += getAmountInEachDirection(t) * 20;
+                //score += getAmountInEachDirection(t) * 20;
 
+                score += getHighestMatch(t) * 20;
+                print(getHighestMatch(t));
 
                 //how many can be in a row in the future
                 score += getHighestWithBlanks(t)*3;
@@ -412,10 +414,12 @@ public class GridManager : MonoBehaviour
             else if (t.currentState == TileClass.states.player2)
             {
                 //how close to the center is it
-                score += (int)Mathf.Abs(t.x - (float)width) * 10;
+                score -= (width+1 - (int)Mathf.Abs(t.x + 1 - (float)width / 2)) * 10;
 
                 //how many total are in a row for each direction with better score for the higher the amount in a row is 
-                score -= getAmountInEachDirection(t) * 20;
+                //score -= getAmountInEachDirection(t) * 20;
+
+                score -= getHighestMatch(t) * 20;
 
                 //how many can be in a row in the future
                 score -= getHighestWithBlanks(t) *3;
@@ -580,7 +584,6 @@ public class GridManager : MonoBehaviour
         currentMax = Mathf.Max(numInRow, currentMax);
         if (numInRow == amountToConnect - 1 && numNull == 1)
         {
-            print("LR");
             return 1000;
         }
 
@@ -605,7 +608,6 @@ public class GridManager : MonoBehaviour
         currentMax = Mathf.Max(numInRow, currentMax);
         if (numInRow == amountToConnect - 1 && numNull == 1)
         {
-            print("DL");
             return 1000;
         }
 
@@ -630,7 +632,6 @@ public class GridManager : MonoBehaviour
         currentMax = Mathf.Max(numInRow, currentMax);
         if (numInRow == amountToConnect - 1 && numNull == 1)
         {
-            print("DR");
             return 1000;
         }
 
@@ -804,7 +805,6 @@ public class GridManager : MonoBehaviour
 
     int miniMax(TreeNode<List<TileClass>> node, int depth, bool maxingPlayer)
     {
-        print("Hi from minimax");
         int score = heuristic(node.Value, maxingPlayer);
         int bestScore = 0;
 
@@ -874,7 +874,6 @@ public class GridManager : MonoBehaviour
                 {
                     bestScore = score;
                     bestBoard = node.Value;
-                    print("Best is " + bestScore);
                 }
             }
         }
@@ -889,7 +888,6 @@ public class GridManager : MonoBehaviour
                 {
                     bestScore = score;
                     bestBoard = node.Value;
-                    print("Best is " + bestScore);
                 }
             }
         }
