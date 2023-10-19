@@ -399,27 +399,44 @@ public class GridManager : MonoBehaviour
         int score = 0;
 
 
-        for (int i = 0; i < allTiles.Count; i++)
+        foreach(TileClass t in inputBoard.Value)
         {
-            if (inputBoard.Value[i].currentState != inputBoard.Parent.Value[i].currentState)
+            if (t.currentState == TileClass.states.player1)
             {
-                if (inputBoard.Value[i].currentState == TileClass.states.player1)
-                {
-                    score += (width - (int)Mathf.Abs(inputBoard.Value[i].x - Mathf.Floor((float)width / 2))) * 10;
-                    //score += getHighestMatch(inputBoard.Value[i]) * 20;
-                    //score += getHighestWithBlanks(inputBoard.Value[i]) * 3;
-                }
-                else
-                {
-                    score -= (width - (int)Mathf.Abs(inputBoard.Value[i].x - Mathf.Floor((float)width / 2))) * 10;
-                    //score -= getHighestMatch(inputBoard.Value[i]) * 20;
-                    //score -= getHighestWithBlanks(inputBoard.Value[i]) * 3;
-                }
-                
-
+                score += (width - (int)Mathf.Abs(t.x - Mathf.Floor((float)width / 2))) * 10;
+                score += getHighestMatch(t) * 20;
+                score += getHighestWithBlanks(t) * 3;
+            }
+            else
+            {
+                score -= (width - (int)Mathf.Abs(t.x - Mathf.Floor((float)width / 2))) * 10;
+                score -= getHighestMatch(t) * 20;
+                score -= getHighestWithBlanks(t) * 3;
             }
         }
-        
+
+
+        //for (int i = 0; i < allTiles.Count; i++)
+        //{
+        //    if (inputBoard.Value[i].currentState != inputBoard.Parent.Value[i].currentState)
+        //    {
+        //        if (inputBoard.Value[i].currentState == TileClass.states.player1)
+        //        {
+        //            score += (width - (int)Mathf.Abs(inputBoard.Value[i].x - Mathf.Floor((float)width / 2))) * 10;
+        //            score += getHighestMatch(inputBoard.Value[i]) * 20;
+        //            score += getHighestWithBlanks(inputBoard.Value[i]) * 3;
+        //        }
+        //        else
+        //        {
+        //            score -= (width - (int)Mathf.Abs(inputBoard.Value[i].x - Mathf.Floor((float)width / 2))) * 10;
+        //            score -= getHighestMatch(inputBoard.Value[i]) * 20;
+        //            score -= getHighestWithBlanks(inputBoard.Value[i]) * 3;
+        //        }
+                
+
+        //    }
+        //}
+        //print(score);
         return score;
     }
 
@@ -806,7 +823,24 @@ public class GridManager : MonoBehaviour
             return score;
         }
 
+        //int highest = 0; ;
+        //foreach(TileClass t in node.Value)
+        //{
+        //    int tempscore = getHighestMatch(t);
+        //    if (tempscore > highest)
+        //    {
+        //        highest = tempscore;
+        //    }
+        //}
 
+        //if(highest >= amountToConnect)
+        //{
+        //    if (maxingPlayer)
+        //    {
+        //        return int.MaxValue;
+        //    }
+        //    else return int.MinValue;
+        //}
 
 
 
@@ -863,9 +897,12 @@ public class GridManager : MonoBehaviour
                 int score = miniMax(node, 1, true);
                 if (score > bestScore)
                 {
+                    
                     bestScore = score;
+                    
                     bestBoard = node.Value;
                 }
+                
             }
         }
         else
@@ -877,9 +914,12 @@ public class GridManager : MonoBehaviour
                 int score = miniMax(node, 1, false);
                 if (score < bestScore)
                 {
+                    
                     bestScore = score;
+                    
                     bestBoard = node.Value;
                 }
+                
             }
         }
 
