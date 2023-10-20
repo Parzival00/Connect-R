@@ -403,15 +403,15 @@ public class GridManager : MonoBehaviour
         {
             if (t.currentState == TileClass.states.player1)
             {
-                score += (width - (int)Mathf.Abs(t.x - Mathf.Floor((float)width / 2))) * 10;
-                score += getHighestMatch(t) * 20;
-                score += getHighestWithBlanks(t) * 3;
+                score += (width - (int)Mathf.Abs(t.x - Mathf.Floor((float)width / 2))) * 15;
+                score +=(int) Mathf.Pow((float)getHighestMatch(t),4f);
+                score +=(int) Mathf.Pow((float)getHighestWithBlanks(t), 2f);
             }
-            else
+            else if(t.currentState == TileClass.states.player2)
             {
                 score -= (width - (int)Mathf.Abs(t.x - Mathf.Floor((float)width / 2))) * 10;
-                score -= getHighestMatch(t) * 20;
-                score -= getHighestWithBlanks(t) * 3;
+                score -= (int)Mathf.Pow((float)getHighestMatch(t), 4f);
+                score -= (int)Mathf.Pow((float)getHighestWithBlanks(t), 2f);
             }
         }
 
