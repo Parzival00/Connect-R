@@ -85,7 +85,7 @@ public class GridManager : MonoBehaviour
         List<TileClass> tempTiles = new List<TileClass>();
 
 
-        buildTree(true);
+        //buildTree(true);
 
         
 
@@ -812,6 +812,35 @@ public class GridManager : MonoBehaviour
     }
 
 
+    void buildTreeRecursive(TreeNode<List<TileClass>> parent, bool maxing, int depth)
+    {
+        List<TileClass> originalBoard = duplicateBoard(allTiles);
+
+        if(depth == maximumDepth+1)
+        {
+            return;
+        }
+
+        for (int i = 0; i < width; i++)
+        {
+
+            allTiles = duplicateBoard(parent.Value);
+
+            placeTokenOnTurn(i, maxing);
+            TreeNode<List<TileClass>> child =  moveTree.AddChild(duplicateBoard(allTiles));
+            buildTreeRecursive(child, !maxing, depth + 1);
+
+            allTiles = duplicateBoard(originalBoard);
+
+        }
+    }
+
+
+
+
+
+
+
     int miniMax(TreeNode<List<TileClass>> node, int depth, bool maxingPlayer)
     {
         int score = heuristic(node, maxingPlayer);
@@ -884,7 +913,10 @@ public class GridManager : MonoBehaviour
 
     void doAIMove(bool maximizing) 
     {
-        buildTree(maximizing);
+        //buildTree(maximizing);
+
+        moveTree = new TreeNode<List<TileClass>>(duplicateBoard(allTiles));
+        buildTreeRecursive(moveTree, maximizing, 0);
 
         List <TileClass> bestBoard = new List<TileClass>();
 
