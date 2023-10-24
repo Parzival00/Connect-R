@@ -5,6 +5,8 @@ using UnityEngine.UI;
 
 public class GridManager : MonoBehaviour
 {
+    //This Script contains the vast majority of the logic for not only the AI code, but also the board
+
     [Header("Debug Parameters")]
     [SerializeField] int width;
     [SerializeField] int height;
@@ -16,9 +18,11 @@ public class GridManager : MonoBehaviour
     [Header("Object References")]
     [SerializeField] InputField input;
     [SerializeField] Text winText;
+    [SerializeField] Text aiMoveText;
     [SerializeField] InputField widthInput;
     [SerializeField] InputField heightInput;
     [SerializeField] InputField RInput;
+    [SerializeField] InputField depthInput;
     [SerializeField] Toggle player1AI;
     [SerializeField] Toggle player2AI;
     [SerializeField] GameObject MainMenu;
@@ -44,6 +48,10 @@ public class GridManager : MonoBehaviour
         
     }
 
+
+    /// <summary>
+    /// reads the input fields or debug settings in the inspector to build a board of nxm connect r
+    /// </summary>
     public void generateGrid()
     {
         MainMenu.SetActive(false);
@@ -56,6 +64,7 @@ public class GridManager : MonoBehaviour
             width = int.Parse(widthInput.text);
             height = int.Parse(heightInput.text);
             amountToConnect = int.Parse(RInput.text);
+            maximumDepth = int.Parse(depthInput.text);
         }
 
 
@@ -100,6 +109,9 @@ public class GridManager : MonoBehaviour
 
     }
 
+    /// <summary>
+    /// Takes in the class object that represents a tile, and returns the in-game tile that it represents
+    /// </summary>
     Tile getTileObject(TileClass t)
     {
         foreach(Tile tile in tileObjects)
@@ -113,6 +125,9 @@ public class GridManager : MonoBehaviour
         return null; 
     }
 
+    /// <summary>
+    /// returns the tile at a position on the board
+    /// </summary>
     public TileClass getTileAtPosition(int x, int y)
     {
         foreach(TileClass t in allTiles)
@@ -139,6 +154,9 @@ public class GridManager : MonoBehaviour
         return newTile;
     }
 
+    /// <summary>
+    /// Returns a copy of the entire board but not a direct reference
+    /// </summary>
     List<TileClass> duplicateBoard(List<TileClass> inputBoard)
     {
         List<TileClass> newList = new List<TileClass>();
@@ -170,6 +188,9 @@ public class GridManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Used for the player to place a token
+    /// </summary>
     public void placeToken()
     {
         TileClass t = getLowest(int.Parse(input.text), height - 1);
@@ -240,6 +261,9 @@ public class GridManager : MonoBehaviour
 
     }
 
+    /// <summary>
+    /// helper function for the AI to simulate the moves it is making
+    /// </summary>
     public void placeTokenOnTurn(int pos, bool isPlayer1)
     {
         TileClass t = getLowest(pos, height - 1);
@@ -264,6 +288,9 @@ public class GridManager : MonoBehaviour
 
     }
 
+    /// <summary>
+    /// the function that the AI calls to actually place its chosen token
+    /// </summary>
     void placeTokenOnTurnColor(int pos, bool isPlayer1)
     {
         TileClass t = getLowest(pos, height - 1);
@@ -327,6 +354,9 @@ public class GridManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// returns the highest possible match associated with the tile inputted
+    /// </summary>
     int getHighestMatch(TileClass t)
     {
         int currentMax = 0;
@@ -394,6 +424,9 @@ public class GridManager : MonoBehaviour
         return currentMax;
     }
 
+    /// <summary>
+    /// mathematically evaluates the given state of the board
+    /// </summary>
     int heuristic(TreeNode<List<TileClass>> inputBoard, bool isPlayer1)
     {
         int score = 0;
@@ -404,7 +437,7 @@ public class GridManager : MonoBehaviour
             if (t.currentState == TileClass.states.player1)
             {
                 score += (width - (int)Mathf.Abs(t.x - Mathf.Floor((float)width / 2))) * 15;
-                score +=(int) Mathf.Pow((float)getHighestMatch(t),4f);
+                score +=(int) Mathf.Pow((float)getHighestMatch(t),4f) + 5;
                 score +=(int) Mathf.Pow((float)getHighestWithBlanks(t), 2f);
             }
             else if(t.currentState == TileClass.states.player2)
@@ -440,7 +473,9 @@ public class GridManager : MonoBehaviour
         return score;
     }
 
-
+    /// <summary>
+    /// (unused) returns the total amount of tokens in a row, initially was going to be used for the heuristic
+    /// </summary>
     int getAmountInEachDirection(TileClass t)
     {
         int score = 0;
@@ -513,6 +548,9 @@ public class GridManager : MonoBehaviour
         return score;
     }
 
+    /// <summary>
+    /// used in the 'killing blow' part of the heuristic to see if there is a section where one token is left to connect r
+    /// </summary>
     int getHighestWithBlanks(TileClass t)
     {
          int currentMax = 0;
@@ -797,7 +835,7 @@ public class GridManager : MonoBehaviour
     }
 
     /// <summary>
-    /// builds the tree at the current game state
+    /// builds the tree at the current game state (the old, bad way)
     /// </summary>
     void buildTree(bool player1Starting)
     {
@@ -811,7 +849,9 @@ public class GridManager : MonoBehaviour
         populateChildren(5, !player1Starting);
     }
 
-
+    /// <summary>
+    /// the better way to build the tree
+    /// </summary>
     void buildTreeRecursive(TreeNode<List<TileClass>> parent, bool maxing, int depth)
     {
         List<TileClass> originalBoard = duplicateBoard(allTiles);
@@ -835,11 +875,9 @@ public class GridManager : MonoBehaviour
         }
     }
 
-
-
-
-
-
+    /// <summary>
+    /// where the AI magic happens...or doesn't happen...
+    /// </summary>
 
     int miniMax(TreeNode<List<TileClass>> node, int depth, bool maxingPlayer)
     {
@@ -911,6 +949,9 @@ public class GridManager : MonoBehaviour
         return bestScore;
     }
 
+    /// <summary>
+    /// actually sets up minimax and places token
+    /// </summary>
     void doAIMove(bool maximizing) 
     {
         //buildTree(maximizing);
@@ -964,6 +1005,8 @@ public class GridManager : MonoBehaviour
                 
             }
         }
+        print("Placing in slot: " + bestmove);
+        aiMoveText.text = "AI move: " + bestmove;
         placeTokenOnTurnColor(bestmove, maximizing);
         
     }
